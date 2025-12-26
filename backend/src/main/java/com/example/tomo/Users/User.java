@@ -6,6 +6,7 @@ import com.example.tomo.Moim_people.Moim_people;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.checkerframework.common.aliasing.qual.Unique;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,10 @@ public class User {
 
     @Column(nullable = false)
     private String inviteCode;
+
+    @Column(nullable = false)
+    @Unique
+    private String fcm;
 
     public User(){}
 

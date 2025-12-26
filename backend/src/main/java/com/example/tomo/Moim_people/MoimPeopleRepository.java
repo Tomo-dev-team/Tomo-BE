@@ -1,5 +1,6 @@
 package com.example.tomo.Moim_people;
 
+import com.example.tomo.Moim.Moim;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -57,6 +58,14 @@ public interface MoimPeopleRepository extends JpaRepository<Moim_people, Long> {
     long countCommonMoims(@Param("meId") Long meId,
                           @Param("otherId") Long otherId);
 
+
+    @Query("""
+
+    SELECT mp.moim
+    FROM Moim_people mp
+    WHERE mp.user.id = :user_id
+    """)
+    List<Moim> findMyMoimsByUserId(@Param("user_id") Long userId);
 
 }
 

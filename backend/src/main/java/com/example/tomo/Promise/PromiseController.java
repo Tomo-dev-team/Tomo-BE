@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -66,7 +67,7 @@ public class PromiseController {
             }
     )
     @GetMapping("/moims/promises")
-    public ResponseEntity<ApiResponse<List<ResponseGetPromiseDto>>> getAllPromises(
+    public ResponseEntity<ApiResponse<List<ResponseGetPromiseDto>>> getAllPromisesInMoims(
             @Parameter(description = "모임 이름", required = true)
             @RequestParam String moimName) {
 
@@ -77,4 +78,32 @@ public class PromiseController {
                 )
         );
     }
+
+    @GetMapping("/promises/all")
+    public ResponseEntity<ApiResponse<List<ResponseGetPromiseDto>>> getAllPromises(
+            @AuthenticationPrincipal String uid
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        promiseService.getAllPromiseByUserId(uid),
+                        "성공"
+                )
+        );
+    }
+
+    @GetMapping("/promises/upcomming")
+    public ResponseEntity<ApiResponse<List<ResponseGetPromiseDto>>> getAllUpcommingPromises(
+            @AuthenticationPrincipal String uid
+
+    ){
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        promiseService.getAllUpcomingPromiseByUserId(uid),
+                        "성공"
+
+                )
+        );
+
+    }
+
 }

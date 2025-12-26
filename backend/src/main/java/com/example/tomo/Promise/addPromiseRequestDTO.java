@@ -1,5 +1,6 @@
 package com.example.tomo.Promise;
 
+import com.example.tomo.global.Embedded.Location;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -26,5 +27,7 @@ public class addPromiseRequestDTO {
     @NotBlank(message = "약속 장소가 누락되었습니다")
     private String place; // 약속 장소
 
+    @NotNull(message = "위치 정보가 누락되었습니다." )
+    private Location location;
 
 }

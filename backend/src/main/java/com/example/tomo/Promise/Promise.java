@@ -1,6 +1,7 @@
 package com.example.tomo.Promise;
 
 import com.example.tomo.Moim.Moim;
+import com.example.tomo.global.Embedded.Location;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -20,7 +21,10 @@ public class Promise {
     @JoinColumn(name ="moim_id")
     private Moim moim;
 
-    private String location;
+    @Embedded
+    private Location location;
+
+    private String place;
 
     private LocalTime promiseTime;
     private LocalDate promiseDate;
@@ -28,12 +32,13 @@ public class Promise {
 
     public Promise() {}
 
-    public Promise(String promiseName, String location,
-                   LocalTime promiseTime, LocalDate promiseDate) {
-        this.location = location;
+    public Promise(String promiseName, String place,
+                   LocalTime promiseTime, LocalDate promiseDate, Location location) {
+        this.place = place;
         this.promiseName = promiseName;
         this.promiseDate = promiseDate;
         this.promiseTime = promiseTime;
+        this.location = location;
     }
 
     public void setMoimBasedPromise(Moim moim){

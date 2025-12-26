@@ -1,23 +1,25 @@
 package com.example.tomo.Moim;
 
-import com.example.tomo.Moim.dtos.addMoimRequestDto;
-import com.example.tomo.Moim.dtos.getDetailMoimDto;
-import com.example.tomo.Moim.dtos.getMoimResponseDto;
-import com.example.tomo.Moim.dtos.addMoimResponseDto;
+import com.example.tomo.Moim.dtos.*;
 import com.example.tomo.Moim_people.MoimPeopleRepository;
 import com.example.tomo.Moim_people.Moim_people;
 import com.example.tomo.Users.User;
+import com.example.tomo.Users.UserErrorCode;
+import com.example.tomo.Users.UserException;
 import com.example.tomo.Users.UserRepository;
 import com.example.tomo.Users.dtos.userSimpleDto;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MoimService {
@@ -30,7 +32,7 @@ public class MoimService {
     @Transactional // 이메일로 처리하기
     public addMoimResponseDto addMoim(String uid, addMoimRequestDto dto) {
 
-        Moim moim = new Moim(dto.getTitle(), dto.getDescription()); // 일단 생성자도 변경해야 해서 그대로 두기
+        Moim moim = new Moim(dto.getTitle(), dto.getDescription(), dto.getIsPublic(), dto.getLocation()); // 일단 생성자도 변경해야 해서 그대로 두기
         Moim saved = moimRepository.save(moim);
 
         List<String> emailList = dto.getEmails();
@@ -140,5 +142,57 @@ public class MoimService {
         //2. 삭제하려는 모임 가져오기,
         moimRepository.delete(moim);
     }
+
+    @Transactional(readOnly = true)
+    public List<getMyMoimDetailDto> getMyAndPublicMoim(String uid){
+        User user = userRepository.findByFirebaseId(uid)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        return moimPeopleRepository.findMyMoimsByUserId(user.getId())
+                .stream()
+                .map(moim -> {
+
+                    List<String> emails = moim.getMoimPeopleList()
+                            .stream()
+                            .map(mp -> mp.getUser().getEmail())
+                            .collect(Collectors.toList());
+
+                    return new getMyMoimDetailDto(
+                            moim.getTitle(),
+                            moim.getDescription(),
+                            moim.getIsPublic(),
+                            emails,
+                            moim.getLocation()
+                    );
+                })
+                .collect(Collectors.toList());
+
+    }
+
+    @Transactional(readOnly = true)
+    public List<getMyMoimDetailDto> getPublicMoim() {
+
+        List<getMyMoimDetailDto> moims = moimRepository.findPublicMoims()
+                .stream()
+                .map(moim ->
+                {
+                    List<String> emailList = moim.getMoimPeopleList()
+                            .stream()
+                            .map(mp -> mp.getUser().getEmail())
+                            .collect(Collectors.toList());
+
+                    return new getMyMoimDetailDto(
+                            moim.getTitle(),
+                            moim.getDescription(),
+                            moim.getIsPublic(),
+                            emailList,
+                            moim.getLocation()
+                    );
+                }
+                )
+                .collect((Collectors.toList()));
+        return moims;
+    }
+
 }
 

@@ -1,7 +1,7 @@
 package com.example.tomo.Moim;
 
 import com.example.tomo.Moim_people.Moim_people;
-import com.example.tomo.Promise.Promise;
+import com.example.tomo.global.Embedded.Location;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -26,15 +26,21 @@ public class Moim {
 
     private String title;
 
+    private Location location;
+
+    private Boolean isPublic;
+
     @Lob
     private String description;
 
     public Moim() {
     }
 
-    public Moim(String title, String description) {
+    public Moim(String title, String description, Boolean isPublic, Location location) {
         this.title = title;
         this.description = description;
+        this.isPublic = isPublic;
+        this.location = location;
     }
 
     private LocalDate createdAt;

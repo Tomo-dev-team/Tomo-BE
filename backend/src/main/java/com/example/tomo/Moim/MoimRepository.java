@@ -22,6 +22,7 @@ public interface MoimRepository extends JpaRepository<Moim, Long> {
     @Query("DELETE FROM Moim m WHERE m.id IN :moimIds")
     void deleteMoimsByIds(@Param("moimIds") List<Long> moimIds);
 
-
+    @Query("SELECT m FROM Moim m WHERE m.isPublic = true")
+    List<Moim> findPublicMoims();
 
 }

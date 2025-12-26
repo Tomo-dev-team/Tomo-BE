@@ -1,9 +1,6 @@
 package com.example.tomo.Moim;
 
-import com.example.tomo.Moim.dtos.addMoimRequestDto;
-import com.example.tomo.Moim.dtos.addMoimResponseDto;
-import com.example.tomo.Moim.dtos.getDetailMoimDto;
-import com.example.tomo.Moim.dtos.getMoimResponseDto;
+import com.example.tomo.Moim.dtos.*;
 import com.example.tomo.global.ReponseType.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -74,4 +71,30 @@ public class MoimController {
                 ApiResponse.success(null, "모임이 삭제되었습니다.")
         );
     }
+
+    @Operation(summary ="사용자가 참가하는 모든 모임 조회")
+    @GetMapping("/moims/my")
+    public ResponseEntity<ApiResponse<List<getMyMoimDetailDto>>> getAllMyMoims(
+            @AuthenticationPrincipal String uid
+    ){
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        moimService.getMyAndPublicMoim(uid),
+                        "성공"
+
+                )
+        );
+    }
+
+    @GetMapping("/moims/all")
+    public ResponseEntity<ApiResponse<List<getMyMoimDetailDto>>> getAllMoims(){
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        moimService.getPublicMoim(),
+                        "성공"
+                )
+        );
+    }
+
+
 }
