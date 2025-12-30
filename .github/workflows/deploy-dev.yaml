@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 소스코드 체크아웃
+      # 1. 소스 체크아웃
       - name: Checkout source
         uses: actions/checkout@v4
 
@@ -21,16 +21,16 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # 3. Gradle 실행 권한 부여 (backend 기준)
+      # 3. Gradle 실행 권한
       - name: Grant execute permission for gradlew
         run: chmod +x backend/gradlew
 
-      # 4. Spring Boot 빌드 (backend 모듈)
+      # 4. Spring Boot 빌드
       - name: Build Spring Boot application
         working-directory: backend
         run: ./gradlew clean build -x test
 
-      # 5. JAR 파일 Oracle Cloud 서버로 전송
+      # 5. 빌드된 JAR 서버로 전송 (임시 위치)
       - name: Upload JAR to Oracle Cloud
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -39,10 +39,10 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           port: ${{ secrets.OCI_PORT }}
           source: backend/build/libs/TOMO-0.0.1-SNAPSHOT.jar
-          target: /home/ubuntu/app
+          target: /home/ubuntu/app/backend/build/libs
 
-      # 6. systemd 서비스 재시작
-      - name: Restart TOMO service
+      # 6. 기존 서비스 종료 → JAR 교체 → 서비스 재시작
+      - name: Restart TOMO service with new JAR
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
@@ -50,5 +50,16 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           port: ${{ secrets.OCI_PORT }}
           script: |
-            sudo systemctl restart tomo
+            echo "== Stop TOMO service =="
+            sudo systemctl stop tomo
+
+            echo "== Replace JAR =="
+            cp /home/ubuntu/app/backend/build/libs/TOMO-0.0.1-SNAPSHOT.jar /home/ubuntu/app/TOMO-0.0.1-SNAPSHOT.jar
+
+            echo "== Reload & Start TOMO service =="
+            sudo systemctl daemon-reload
+            sudo systemctl start tomo
+
+            echo "== TOMO service status =="
+            sudo systemctl status tomo --no-pager
 
