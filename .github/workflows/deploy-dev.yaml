@@ -26,7 +26,7 @@ jobs:
         working-directory: backend
         run: ./gradlew clean build -x test
 
-      # ✅ 1. JAR를 app으로 업로드 (이름은 그대로)
+      # 1️⃣ JAR 업로드 (이미 tomo.jar로 올라가는 구조)
       - name: Upload JAR to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -37,7 +37,7 @@ jobs:
           source: backend/build/libs/TOMO-*.jar
           target: /home/ubuntu/app
 
-      # ✅ 2. 서버에서 무중단 스위치 처리
+      # 2️⃣ Blue / Green 무중단 스위치
       - name: Blue-Green Deploy & Switch
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -60,16 +60,13 @@ jobs:
             echo "ACTIVE_PORT=$ACTIVE_PORT"
             echo "TARGET_PORT=$TARGET_PORT"
 
-            echo "== Rename JAR to tomo.jar =="
-            mv /home/ubuntu/app/TOMO-*.jar /home/ubuntu/app/tomo.jar
-
             echo "== Reload systemd =="
             sudo systemctl daemon-reload
 
             echo "== Restart inactive service =="
             sudo systemctl restart tomo-$TARGET_PORT
 
-            echo "== Health check =="
+            echo "== Health check on $TARGET_PORT =="
             for i in {1..10}; do
               if curl -sf http://localhost:$TARGET_PORT/swagger-ui/index.html > /dev/null; then
                 echo "Health check OK"
