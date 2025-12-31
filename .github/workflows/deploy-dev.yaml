@@ -81,5 +81,8 @@ jobs:
 
             sudo nginx -t
             sudo systemctl reload nginx
+            
+            echo "== Ensure previous active service is running =="
+            sudo systemctl start tomo-$ACTIVE_PORT || true
 
             echo "== Deployment completed. Traffic switched to $TARGET_PORT =="
