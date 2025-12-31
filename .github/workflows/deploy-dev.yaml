@@ -10,27 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 코드 체크아웃
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Java 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      # 3. Gradle 권한
       - name: Grant gradlew permission
         run: chmod +x backend/gradlew
 
-      # 4. 빌드
       - name: Build Spring Boot
         working-directory: backend
         run: ./gradlew clean build -x test
 
-      # 5. JAR 업로드 (⚠️ app 루트로 바로)
+      # ✅ 1. JAR를 app으로 업로드 (이름은 그대로)
       - name: Upload JAR to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -38,11 +34,11 @@ jobs:
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_KEY }}
           port: ${{ secrets.OCI_PORT }}
-          source: backend/build/libs/TOMO-0.0.1-SNAPSHOT.jar
+          source: backend/build/libs/TOMO-*.jar
           target: /home/ubuntu/app
 
-      # 6. 서비스 재시작
-      - name: Restart TOMO service
+      # ✅ 2. 서버에서 무중단 스위치 처리
+      - name: Blue-Green Deploy & Switch
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
@@ -50,12 +46,43 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           port: ${{ secrets.OCI_PORT }}
           script: |
+            set -e
+
+            echo "== Determine active port from nginx =="
+            ACTIVE_PORT=$(grep -oE 'server 127\.0\.0\.1:(8081|8082);' /etc/nginx/sites-enabled/tomo.conf | grep -oE '8081|8082')
+
+            if [ "$ACTIVE_PORT" = "8081" ]; then
+              TARGET_PORT=8082
+            else
+              TARGET_PORT=8081
+            fi
+
+            echo "ACTIVE_PORT=$ACTIVE_PORT"
+            echo "TARGET_PORT=$TARGET_PORT"
+
+            echo "== Rename JAR to tomo.jar =="
+            mv /home/ubuntu/app/TOMO-*.jar /home/ubuntu/app/tomo.jar
+
             echo "== Reload systemd =="
             sudo systemctl daemon-reload
 
-            echo "== Restart TOMO =="
-            sudo systemctl restart tomo
+            echo "== Restart inactive service =="
+            sudo systemctl restart tomo-$TARGET_PORT
 
-            echo "== Status =="
-            sudo systemctl status tomo --no-pager
+            echo "== Health check =="
+            for i in {1..10}; do
+              if curl -sf http://localhost:$TARGET_PORT/swagger-ui/index.html > /dev/null; then
+                echo "Health check OK"
+                break
+              fi
+              sleep 3
+            done
 
+            echo "== Switch nginx upstream =="
+            sudo sed -i "s/server 127.0.0.1:$ACTIVE_PORT;/server 127.0.0.1:$TARGET_PORT;/" \
+              /etc/nginx/sites-enabled/tomo.conf
+
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "== Deployment completed. Traffic switched to $TARGET_PORT =="
