@@ -15,6 +15,11 @@ public class FirebaseInitializer {
     public void initialize() throws IOException {
 
         String keyPath = System.getenv("FIREBASE_KEY_PATH");
+
+        if (keyPath == null) {
+            throw new IllegalStateException("FIREBASE_KEY_PATH is not set");
+        }
+
         FileInputStream serviceAccount = new FileInputStream(keyPath);
 
         FirebaseOptions options = FirebaseOptions.builder()
