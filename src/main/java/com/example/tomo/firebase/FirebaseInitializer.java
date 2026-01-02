@@ -1,0 +1,36 @@
+package com.example.tomo.firebase;
+
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import jakarta.annotation.PostConstruct;
+import org.springframework.stereotype.Component;
+import java.io.FileInputStream;
+import java.io.IOException;
+
+@Component
+public class FirebaseInitializer {
+
+    @PostConstruct
+    public void initialize() throws IOException {
+
+        /*String keyPath = System.getenv("FIREBASE_KEY_PATH");
+
+        if (keyPath == null) {
+            throw new IllegalStateException("FIREBASE_KEY_PATH is not set");
+        }
+
+        FileInputStream serviceAccount = new FileInputStream(keyPath);*/
+
+        FileInputStream serviceAccount = new FileInputStream("/Users/myeongsung/Documents/markoala/Tomo/backend/src/main/resources/serviceAccountKey.json");
+
+
+        FirebaseOptions options = FirebaseOptions.builder()
+                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                .build();
+
+        if (FirebaseApp.getApps().isEmpty()) {
+            FirebaseApp.initializeApp(options);
+        }
+    }
+}
