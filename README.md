@@ -1,46 +1,34 @@
-### TOMO Backend
+# Tomo
 
-Spring Boot 기반의 TOMO 백엔드 서버입니다.
-유저 인증(Firebase), 모임 관리, 친구 관리 등 주요 도메인 기능을 제공합니다.
+> 토모(Tomo)는 친구와의 순간을 기록하고, 모임을 관리하며, 친밀도를 확인할 수 있는 **Android 앱**입니다.  
 
-본 저장소는 Java 21 / Spring Boot 3.5.5 기반으로 개발되었으며,
-운영 환경에서는 Oracle DB + Nginx Reverse Proxy 구조로 배포됩니다.
+---
+[PlayStore 링크](https://play.google.com/store/apps/details?id=com.markoala.tomoandroid&pcampaignid=web_share)
 
-📌 Tech Stack
-Backend
+주요 기능
+- 모임 생성 & 관리 — 제목·설명만 입력하면 쉽게 모임 생성! 친구를 초대하고, 생성일·참여 인원·진행 기간까지 한눈에 관리하세요.
+- 친구 목록 & 친밀도 시스템 — 이메일 또는 친구코드로 친구 추가! 각 친구와의 친밀도를 확인하고, “새로운 친구” 배지로 새 연결도 알려줍니다.
+- 모임 타임라인 홈 화면 — 진행 중인 모임과 완료된 모임을 한 화면에! 모임장은 별도로 표시되어 체계적인 모임 운영이 가능합니다.
+- 간편한 3단계 모임 생성 플로우 — 기본 정보 입력 → 친구 초대 → 확인 후 생성. 빠르고 쉬운 사용자 경험을 제공합니다.
+- 심플하고 따뜻한 UI — 감성적인 디자인과 부드러운 색감의 직관적 인터페이스로 누구나 편안하게 사용 가능해요.
 
-Java 21
+---
 
-Spring Boot 3.5.5
 
-Spring Web
+## 팀 소개
 
-Spring Data JPA
+| 역할 | 역할 |
+|:---:|:---:|
+| **Android 개발** | **Backend 개발** |
+| <img src="https://avatars.githubusercontent.com/mark77234" width="70" height="70" style="border-radius:50%"/> | <img src="https://avatars.githubusercontent.com/tomchaccom" width="70" height="70" style="border-radius:50%"/> |
+| **이병찬** | **김명성** |
+| [github.com/mark77234](https://github.com/mark77234) | [github.com/tomchaccom](https://github.com/tomchaccom) |
 
-Spring Security
+> 다가올 업데이트도 기대해 주세요. 지금, Tomo와 함께 소중한 우정을 기록해보세요!
 
-Spring Validation
 
-Lombok
+---
 
-JJWT (0.11.5)
-
-firebase-admin SDK
-
-Database
-
-Oracle DB
-
-Build & Dependency
-
-Gradle (Groovy DSL)
-
-Dev Tools
-
-Spring DevTools
-
-JUnit 5
-
-API 문서
-
-springdoc-openapi-starter-webmvc-ui (Swagger UI)
+<p align="center">
+  <sub>© 2025 Markoala Team. All rights reserved.</sub>
+</p>
