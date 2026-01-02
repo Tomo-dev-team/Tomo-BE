@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# IntelliJ / IDEA
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+
+# Logs
+*.log
+
+# keys / secrets
+*.pem
+*.key
+*.json
