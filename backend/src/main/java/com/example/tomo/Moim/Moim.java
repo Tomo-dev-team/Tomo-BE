@@ -1,6 +1,7 @@
 package com.example.tomo.Moim;
 
 import com.example.tomo.Moim_people.Moim_people;
+import com.example.tomo.Promise.Promise;
 import com.example.tomo.global.Embedded.Location;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -54,5 +55,13 @@ public class Moim {
     public void addMoimPeople(Moim_people moimPeople) {
         moimPeopleList.add(moimPeople);
         moimPeople.setMoim(this);
+    }
+
+    @OneToMany(mappedBy = "moim", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Promise> promises = new ArrayList<>();
+
+    public void addPromise(Promise promise) {
+        promises.add(promise);
+        promise.setMoimBasedPromise(this);
     }
 }

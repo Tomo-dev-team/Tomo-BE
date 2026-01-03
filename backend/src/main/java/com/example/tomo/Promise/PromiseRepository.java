@@ -16,9 +16,7 @@ public interface PromiseRepository extends JpaRepository<Promise, Long> {
     boolean existsByPromiseName(String name);
     boolean existsByPromiseDateAndPromiseTime( LocalDate date,LocalTime time);
 
-    @Query("SELECT new com.example.tomo.Promise.ResponseGetPromiseDto(p.promiseName, p.promiseDate, p.promiseTime, p.place" +
-            ") FROM Promise p WHERE p.moim.id =:moim_id")
-    List<ResponseGetPromiseDto> findByMoimId(@Param("moim_id") Long moim_id);
+    List<Promise> findByMoimId(Long moimId);
 
     Optional<Promise> findByPromiseName(String name);
 }
