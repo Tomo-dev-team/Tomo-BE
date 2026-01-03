@@ -84,7 +84,7 @@ jobs:
             echo "== Reload systemd =="
             sudo systemctl daemon-reload
 
-            echo "== Restart inactive service =="
+            echo "== Restart inactive service (tomo-$TARGET_PORT) =="
             sudo systemctl restart tomo-$TARGET_PORT
 
             echo "== Health check on $TARGET_PORT =="
