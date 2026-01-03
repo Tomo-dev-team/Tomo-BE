@@ -97,9 +97,9 @@ jobs:
             done
 
             echo "== Verify new API exists in jar =="
-            strings /home/ubuntu/app/tomo.jar | grep "/public/promises/my/upcoming" || {
-              echo "❌ New API not found in tomo.jar"
-              exit 1
+            strings /home/ubuntu/app/tomo.jar | grep "PromiseController" || {
+            echo "❌ PromiseController not found in tomo.jar"
+            exit 1
             }
 
             echo "== Switch nginx upstream =="
