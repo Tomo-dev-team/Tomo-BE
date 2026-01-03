@@ -12,7 +12,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class addMoimRequestDto {
+public class AddMoimRequestDto {
 
     @NotBlank(message = "모임명이 누락되었습니다.")
     private String title;

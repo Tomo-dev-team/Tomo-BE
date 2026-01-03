@@ -50,4 +50,9 @@ public class Moim {
     protected void onCreate() {
         this.createdAt = LocalDate.now();
     }
+
+    public void addMoimPeople(Moim_people moimPeople) {
+        moimPeopleList.add(moimPeople);
+        moimPeople.setMoim(this);
+    }
 }
