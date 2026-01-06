@@ -13,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Tag(name = "Moim API", description = "모임 생성, 조회, 삭제 API")
@@ -28,7 +30,7 @@ public class MoimController {
     /* =====================
        모임 생성
        ===================== */
-    @PostMapping
+    @PostMapping(consumes = "application/json")
     public ResponseEntity<ApiResponse<MoimResponseDto>> createMoim(
             @Valid @RequestBody AddMoimRequestDto dto,
             @AuthenticationPrincipal String uid
@@ -39,7 +41,38 @@ public class MoimController {
                 dto.getDescription(),
                 dto.getIsPublic(),
                 dto.getLocation(),
-                dto.getEmails()
+                dto.getEmails(),
+                null
+        );
+
+        MoimQueryResult result = moimService.getMoim(moim.getId(), uid);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(
+                        moimResponseAssembler.toDto(
+                                result.getMoim(),
+                                result.getEmails(),
+                                result.isLeader()
+                        ),
+                        "모임이 생성되었습니다."
+                ));
+    }
+    @PostMapping(consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<MoimResponseDto>> createMoimWithImage(
+            @Valid @RequestPart("request") AddMoimRequestDto dto,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @AuthenticationPrincipal String uid
+    ) throws IOException {
+
+        Moim moim = moimService.createMoim(
+                uid,
+                dto.getTitle(),
+                dto.getDescription(),
+                dto.getIsPublic(),
+                dto.getLocation(),
+                dto.getEmails(),
+                image
         );
 
         MoimQueryResult result = moimService.getMoim(moim.getId(), uid);
