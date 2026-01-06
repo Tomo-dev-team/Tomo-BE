@@ -9,10 +9,12 @@ import com.example.tomo.Users.UserErrorCode;
 import com.example.tomo.Users.UserException;
 import com.example.tomo.Users.UserRepository;
 import com.example.tomo.global.Embedded.Location;
+import com.example.tomo.global.S3.S3UploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,6 +27,7 @@ public class MoimService {
     private final MoimRepository moimRepository;
     private final UserRepository userRepository;
     private final MoimPeopleRepository moimPeopleRepository;
+    private final S3UploadService s3UploadService;
 
     /* =====================
        모임 생성
@@ -36,7 +39,8 @@ public class MoimService {
             String description,
             Boolean isPublic,
             Location location,
-            List<String> emails
+            List<String> emails,
+            MultipartFile image
     ) {
 
         User leader = userRepository.findByFirebaseId(uid)
@@ -59,6 +63,14 @@ public class MoimService {
             }
 
             moim.addMoimPeople(new Moim_people(moim, user, false));
+        }
+
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = s3UploadService.uploadMoimImage(
+                    moim.getId(),
+                    image
+            );
+            moim.updateUrl(imageUrl);
         }
 
         return moim;
