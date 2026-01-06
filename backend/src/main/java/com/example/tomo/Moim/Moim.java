@@ -34,6 +34,8 @@ public class Moim {
     @Lob
     private String description;
 
+    private String imageUrl;
+
     public Moim() {
     }
 
@@ -63,5 +65,9 @@ public class Moim {
     public void addPromise(Promise promise) {
         promises.add(promise);
         promise.setMoimBasedPromise(this);
+    }
+
+    public void updateUrl(String imageUrl){
+        this.imageUrl = imageUrl;
     }
 }
