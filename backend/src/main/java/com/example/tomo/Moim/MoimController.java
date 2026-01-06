@@ -4,6 +4,7 @@ import com.example.tomo.Moim.dtos.MoimQueryResult;
 import com.example.tomo.Moim.dtos.MoimResponseDto;
 import com.example.tomo.Moim.dtos.AddMoimRequestDto;
 import com.example.tomo.global.ReponseType.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,6 +27,8 @@ public class MoimController {
 
     private final MoimService moimService;
     private final MoimResponseAssembler moimResponseAssembler;
+    private final ObjectMapper objectMapper;
+
 
     /* =====================
        모임 생성
@@ -58,13 +61,27 @@ public class MoimController {
                         "모임이 생성되었습니다."
                 ));
     }
+    @Operation(
+            summary = "모임 생성 (대표 이미지 선택 가능)",
+            description = """
+    모임을 생성하고 대표 이미지를 함께 업로드합니다.
+
+    - request: 모임 생성 정보(JSON 문자열)
+    - image: JPG 이미지 파일 (선택)
+    """
+    )
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<MoimResponseDto>> createMoimWithImage(
-            @Valid @RequestPart("request") AddMoimRequestDto dto,
+            @RequestPart("request") String requestJson,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal String uid
     ) throws IOException {
 
+        // 1️⃣ JSON 문자열 → DTO 변환
+        AddMoimRequestDto dto =
+                objectMapper.readValue(requestJson, AddMoimRequestDto.class);
+
+        // 2️⃣ 모임 생성
         Moim moim = moimService.createMoim(
                 uid,
                 dto.getTitle(),
@@ -75,6 +92,7 @@ public class MoimController {
                 image
         );
 
+        // 3️⃣ 응답 조립
         MoimQueryResult result = moimService.getMoim(moim.getId(), uid);
 
         return ResponseEntity
@@ -88,6 +106,7 @@ public class MoimController {
                         "모임이 생성되었습니다."
                 ));
     }
+
 
     /* =====================
        모임 단일 조회
