@@ -58,53 +58,50 @@ public class S3UploadService {
             Set.of("image/jpeg", "image/png", "image/webp");
 
     private void validate(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("빈 파일입니다");
+        if (file == null || file.isEmpty()) {
+            throw new S3Exception(S3ErrorCode.INVALID_FILE);
         }
 
         if (file.getSize() > MAX_SIZE) {
-            throw new IllegalArgumentException("파일 크기는 5MB 이하만 허용됩니다");
+            throw new S3Exception(S3ErrorCode.INVALID_FILE);
         }
 
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("허용되지 않은 이미지 타입입니다");
+            throw new S3Exception(S3ErrorCode.INVALID_FILE);
         }
     }
 
-    public String uploadMoimImage(Long moimId, MultipartFile file) throws IOException {
 
-        // 1️⃣ 파일 검증 (기존 로직 재사용)
-        validate(file);
+    public String uploadMoimImage(Long moimId, MultipartFile file) {
 
-        // 2️⃣ 확장자 처리 (원본 기준)
-        String originalFilename = file.getOriginalFilename();
-        String extension = ".jpg";
+        try {
+            validate(file);
 
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String originalFilename = file.getOriginalFilename();
+            String extension = ".jpg";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+
+            String key = "images/moim/" + moimId + "/cover/" + UUID.randomUUID() + extension;
+
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .contentType(file.getContentType())
+                    .build();
+
+            s3Client.putObject(
+                    request,
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize())
+            );
+
+            return "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + key;
+
+        } catch (IOException e) {
+            throw new S3Exception(S3ErrorCode.S3_UPLOAD_FAILED);
         }
-
-        // 3️⃣ S3 key 생성 (모임 대표 이미지 경로)
-        String key = "images/moim/" + moimId + "/cover/" + UUID.randomUUID() + extension;
-
-        // 4️⃣ S3 업로드
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .contentType(file.getContentType())
-                .build();
-
-        s3Client.putObject(
-                request,
-                RequestBody.fromInputStream(file.getInputStream(), file.getSize())
-        );
-
-        // 5️⃣ 접근 URL 반환
-        return "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + key;
     }
-
-
-
 
 }
 
