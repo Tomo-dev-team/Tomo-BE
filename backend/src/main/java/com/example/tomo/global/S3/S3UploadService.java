@@ -26,7 +26,7 @@ public class S3UploadService {
     @Value("${cloud.aws.s3.bucketName}")
     private String bucketName;
 
-    public String upload(MultipartFile file, String uid) throws IOException {
+    public String upload (MultipartFile file, String uid) throws IOException {
         validate(file);
         User user = userRepository.findByFirebaseId(uid)
                 .orElseThrow(()-> new UserException(UserErrorCode.USER_NOT_FOUND));
@@ -70,6 +70,41 @@ public class S3UploadService {
             throw new IllegalArgumentException("허용되지 않은 이미지 타입입니다");
         }
     }
+
+    public String uploadMoimImage(Long moimId, MultipartFile file) throws IOException {
+
+        // 1️⃣ 파일 검증 (기존 로직 재사용)
+        validate(file);
+
+        // 2️⃣ 확장자 처리 (원본 기준)
+        String originalFilename = file.getOriginalFilename();
+        String extension = ".jpg";
+
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+
+        // 3️⃣ S3 key 생성 (모임 대표 이미지 경로)
+        String key = "images/moim/" + moimId + "/cover/" + UUID.randomUUID() + extension;
+
+        // 4️⃣ S3 업로드
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType(file.getContentType())
+                .build();
+
+        s3Client.putObject(
+                request,
+                RequestBody.fromInputStream(file.getInputStream(), file.getSize())
+        );
+
+        // 5️⃣ 접근 URL 반환
+        return "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + key;
+    }
+
+
+
 
 }
 
