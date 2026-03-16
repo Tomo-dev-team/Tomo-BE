@@ -4,8 +4,17 @@
 
 ---
 [PlayStore 링크](https://play.google.com/store/apps/details?id=com.markoala.tomoandroid&pcampaignid=web_share)
+## ERD
+<img width="2040" height="1060" alt="image" src="https://github.com/user-attachments/assets/878c7c25-02b5-4af1-bfd1-70fb5268d0a3" />
 
-주요 기능
+
+
+## System Architecture
+<img width="1024" height="364" alt="image" src="https://github.com/user-attachments/assets/17a13aab-f163-44a9-84ad-0e7b1dfb24d7" />
+
+
+
+## Main Feature
 - 모임 생성 & 관리 — 제목·설명만 입력하면 쉽게 모임 생성! 친구를 초대하고, 생성일·참여 인원·진행 기간까지 한눈에 관리하세요.
 - 친구 목록 & 친밀도 시스템 — 이메일 또는 친구코드로 친구 추가! 각 친구와의 친밀도를 확인하고, “새로운 친구” 배지로 새 연결도 알려줍니다.
 - 모임 타임라인 홈 화면 — 진행 중인 모임과 완료된 모임을 한 화면에! 모임장은 별도로 표시되어 체계적인 모임 운영이 가능합니다.
@@ -13,9 +22,12 @@
 - 심플하고 따뜻한 UI — 감성적인 디자인과 부드러운 색감의 직관적 인터페이스로 누구나 편안하게 사용 가능해요.
 
 ---
+## API Docs
+>https://markoala.shop/swagger-ui/index.html
 
 
-## 팀 소개
+
+## Team intorduce
 
 | 역할 | 역할 |
 |:---:|:---:|
