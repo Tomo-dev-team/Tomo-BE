@@ -39,7 +39,7 @@ jobs:
         run: ./gradlew clean build -x test
 
       # =====================
-      # 5. Upload JAR (경로 평탄화)
+      # 5. Upload JAR
       # =====================
       - name: Upload JAR to server
         uses: appleboy/scp-action@v0.1.7
@@ -62,16 +62,48 @@ jobs:
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_KEY }}
           port: ${{ secrets.OCI_PORT }}
+
           script: |
             set -e
 
+            echo "========================================="
+            echo "== Start TOMO Deployment"
+            echo "========================================="
+
+            # ---------------------------------
+            # 1. 최신 JAR 교체
+            # ---------------------------------
             echo "== Replace tomo.jar with latest build =="
-            sudo cp /home/ubuntu/app/TOMO-0.0.1-SNAPSHOT.jar /home/ubuntu/app/tomo.jar
-            sudo chown ubuntu:ubuntu /home/ubuntu/app/tomo.jar
 
+            sudo cp \
+              /home/ubuntu/app/TOMO-0.0.1-SNAPSHOT.jar \
+              /home/ubuntu/app/tomo.jar
+
+            sudo chown ubuntu:ubuntu \
+              /home/ubuntu/app/tomo.jar
+
+
+            # ---------------------------------
+            # 2. 현재 Nginx가 바라보는 포트 확인
+            # ---------------------------------
             echo "== Determine active port from nginx =="
-            ACTIVE_PORT=$(grep -oE 'server 127\.0\.0\.1:(8081|8082);' /etc/nginx/sites-enabled/tomo.conf | grep -oE '8081|8082')
 
+            ACTIVE_PORT=$(
+              grep -oE 'server 127\.0\.0\.1:(8081|8082);' \
+                /etc/nginx/sites-enabled/tomo.conf \
+              | grep -oE '8081|8082' \
+              | head -n 1
+            )
+
+            if [ -z "$ACTIVE_PORT" ]; then
+              echo "❌ Could not determine active port"
+              exit 1
+            fi
+
+
+            # ---------------------------------
+            # 3. 반대쪽 포트를 배포 대상으로 결정
+            # ---------------------------------
             if [ "$ACTIVE_PORT" = "8081" ]; then
               TARGET_PORT=8082
             else
@@ -81,30 +113,164 @@ jobs:
             echo "ACTIVE_PORT=$ACTIVE_PORT"
             echo "TARGET_PORT=$TARGET_PORT"
 
+
+            # ---------------------------------
+            # 4. systemd 설정 갱신
+            # ---------------------------------
             echo "== Reload systemd =="
+
             sudo systemctl daemon-reload
 
+
+            # ---------------------------------
+            # 5. 비활성 포트에 새 버전 실행
+            # ---------------------------------
             echo "== Restart inactive service (tomo-$TARGET_PORT) =="
+
             sudo systemctl restart tomo-$TARGET_PORT
 
+
+            # ---------------------------------
+            # 6. Health Check
+            # ---------------------------------
             echo "== Health check on $TARGET_PORT =="
-            for i in {1..10}; do
-              if curl -sf http://127.0.0.1:$TARGET_PORT/actuator/health | grep '"status":"UP"' > /dev/null; then
-                echo "Health check OK"
-                break
+
+            HEALTH_OK=false
+
+            # 3초 × 30회 = 최대 약 90초 대기
+            for i in {1..30}; do
+
+              HEALTH_STATUS=$(
+                curl -s \
+                  -o /tmp/tomo-health-response \
+                  -w '%{http_code}' \
+                  http://127.0.0.1:$TARGET_PORT/actuator/health \
+                  || true
+              )
+
+              if [ "$HEALTH_STATUS" = "200" ]; then
+
+                if grep '"status":"UP"' \
+                  /tmp/tomo-health-response > /dev/null; then
+
+                  echo "✅ Health check OK"
+                  HEALTH_OK=true
+                  break
+
+                fi
               fi
+
+              echo "Health check failed ($i/30, HTTP $HEALTH_STATUS)"
+
               sleep 3
             done
-            }
 
+            rm -f /tmp/tomo-health-response
+
+
+            # ---------------------------------
+            # 7. Health Check 실패 시 배포 중단
+            # ---------------------------------
+            if [ "$HEALTH_OK" != "true" ]; then
+
+              echo "========================================="
+              echo "❌ Health check failed"
+              echo "❌ Deployment aborted"
+              echo "========================================="
+
+              echo "== systemd status =="
+
+              sudo systemctl show tomo-$TARGET_PORT \
+                --property=ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,NRestarts,MainPID \
+                --no-pager
+
+
+              echo "== Listening ports =="
+
+              sudo ss -ltnp \
+                | grep -E ':(8081|8082)[[:space:]]' \
+                || true
+
+
+              echo "== Recent application logs =="
+
+              sudo journalctl \
+                -u tomo-$TARGET_PORT \
+                -n 120 \
+                --no-pager \
+                -o cat \
+                | grep -E \
+                'APPLICATION FAILED|ERROR|Exception|Caused by|Failed to|Address already in use|Tomcat|Hikari|DataSource|Communications link|timed out|Timeout|Started TOMO' \
+                | tail -n 40 \
+                || true
+
+
+              echo "== Existing traffic remains on $ACTIVE_PORT =="
+
+              exit 1
+            fi
+
+
+            # ---------------------------------
+            # 8. Nginx 설정 백업
+            # ---------------------------------
+            echo "== Backup nginx config =="
+
+            sudo cp \
+              /etc/nginx/sites-enabled/tomo.conf \
+              /tmp/tomo.conf.backup
+
+
+            # ---------------------------------
+            # 9. Nginx upstream 변경
+            # ---------------------------------
             echo "== Switch nginx upstream =="
-            sudo sed -i "s/server 127.0.0.1:$ACTIVE_PORT;/server 127.0.0.1:$TARGET_PORT;/" \
+
+            sudo sed -i \
+              "s/server 127.0.0.1:$ACTIVE_PORT;/server 127.0.0.1:$TARGET_PORT;/" \
               /etc/nginx/sites-enabled/tomo.conf
 
-            sudo nginx -t
+
+            # ---------------------------------
+            # 10. Nginx 설정 검증
+            # ---------------------------------
+            echo "== Validate nginx config =="
+
+            if ! sudo nginx -t; then
+
+              echo "❌ nginx config validation failed"
+              echo "== Restore previous nginx config =="
+
+              sudo cp \
+                /tmp/tomo.conf.backup \
+                /etc/nginx/sites-enabled/tomo.conf
+
+              rm -f /tmp/tomo.conf.backup
+
+              exit 1
+            fi
+
+
+            # ---------------------------------
+            # 11. Nginx reload
+            # ---------------------------------
+            echo "== Reload nginx =="
+
             sudo systemctl reload nginx
 
-            echo "== Keep previous service running (rollback safe) =="
+            rm -f /tmp/tomo.conf.backup
+
+
+            # ---------------------------------
+            # 12. 기존 버전 유지
+            # ---------------------------------
+            echo "== Keep previous service running =="
+
             sudo systemctl start tomo-$ACTIVE_PORT || true
 
-            echo "== Deployment completed. Traffic switched to $TARGET_PORT =="
+
+            echo "========================================="
+            echo "✅ Deployment completed"
+            echo "Traffic switched:"
+            echo "$ACTIVE_PORT -> $TARGET_PORT"
+            echo "========================================="
