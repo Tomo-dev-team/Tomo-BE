@@ -30,6 +30,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String refreshHeader = request.getHeader("Refresh-Token");
         String path = request.getRequestURI();
 
+        if (path.equals("/actuator/health")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // /api/protected/** 요청은 JWT 검증하지 않고 다음 필터로
         if (path.startsWith("/api/auth/firebase-login")) {
             filterChain.doFilter(request, response);
