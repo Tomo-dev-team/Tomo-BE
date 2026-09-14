@@ -138,8 +138,8 @@ jobs:
             HEALTH_OK=false
             HEALTH_BODY=$(mktemp)
 
-            # 3초 × 60회 = 최대 약 180초
-            for i in {1..60}; do
+            
+            for i in {1..100}; do
 
               HEALTH_STATUS=$(
                 curl -s \
@@ -161,7 +161,7 @@ jobs:
                 fi
               fi
 
-              echo "Health check failed ($i/60, HTTP $HEALTH_STATUS)"
+              echo "Health check failed ($i/100, HTTP $HEALTH_STATUS)"
 
               sleep 3
             done
