@@ -91,7 +91,7 @@ jobs:
             HEALTH_OK=false
             HEALTH_BODY=$(mktemp)
 
-            for i in {1..10}; do
+            for i in {1..30}; do
               HEALTH_STATUS=$(curl -sS -o "$HEALTH_BODY" -w '%{http_code}' \
                 http://127.0.0.1:$TARGET_PORT/actuator/health || true)
 
@@ -101,7 +101,7 @@ jobs:
                 break
               fi
 
-              echo "Health check failed ($i/10, HTTP $HEALTH_STATUS): $(cat "$HEALTH_BODY")"
+              echo "Health check failed ($i/30, HTTP $HEALTH_STATUS): $(cat "$HEALTH_BODY")"
               sleep 3
             done
 
