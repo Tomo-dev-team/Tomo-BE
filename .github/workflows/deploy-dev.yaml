@@ -110,10 +110,11 @@ jobs:
             if [ "$HEALTH_OK" != "true" ]; then
               echo "Health check failed. Deployment aborted."
               sudo systemctl show tomo-$TARGET_PORT \
-                --property=ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,NRestarts \
+                --property=ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,NRestarts,MainPID,Environment \
                 --no-pager
+              sudo ss -ltnp | grep -E ':(8081|8082)[[:space:]]' || true
               sudo journalctl -u tomo-$TARGET_PORT -n 120 --no-pager -o cat \
-                | grep -E 'APPLICATION FAILED|ERROR|Exception|Caused by|Failed to|Address already in use' \
+                | grep -E 'APPLICATION FAILED|ERROR|Exception|Caused by|Failed to|Address already in use|Tomcat|Hikari|DataSource|Communications link|timed out|Timeout|Started TOMO' \
                 | tail -n 40 || true
               exit 1
             fi
