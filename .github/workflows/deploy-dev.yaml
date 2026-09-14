@@ -88,19 +88,23 @@ jobs:
             sudo systemctl restart tomo-$TARGET_PORT
 
             echo "== Health check on $TARGET_PORT =="
+            HEALTH_OK=false
+
             for i in {1..10}; do
               if curl -sf http://127.0.0.1:$TARGET_PORT/actuator/health | grep '"status":"UP"' > /dev/null; then
                 echo "Health check OK"
+                HEALTH_OK=true
                 break
               fi
+
+              echo "Health check failed ($i/10)"
               sleep 3
             done
 
-            echo "== Verify new API exists in jar =="
-            strings /home/ubuntu/app/tomo.jar | grep "PromiseController" || {
-            echo "❌ PromiseController not found in tomo.jar"
-            exit 1
-            }
+            if [ "$HEALTH_OK" != "true" ]; then
+              echo "Health check failed. Deployment aborted."
+              exit 1
+            fi
 
             echo "== Switch nginx upstream =="
             sudo sed -i "s/server 127.0.0.1:$ACTIVE_PORT;/server 127.0.0.1:$TARGET_PORT;/" \
