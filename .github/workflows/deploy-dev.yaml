@@ -136,13 +136,15 @@ jobs:
             echo "== Health check on $TARGET_PORT =="
 
             HEALTH_OK=false
+            HEALTH_BODY=$(mktemp)
 
-            # 3초 × 30회 = 최대 약 90초 대기
-            for i in {1..30}; do
+            # 3초 × 60회 = 최대 약 180초
+            for i in {1..60}; do
 
               HEALTH_STATUS=$(
                 curl -s \
-                  -o /tmp/tomo-health-response \
+                  --max-time 5 \
+                  -o "$HEALTH_BODY" \
                   -w '%{http_code}' \
                   http://127.0.0.1:$TARGET_PORT/actuator/health \
                   || true
@@ -150,8 +152,7 @@ jobs:
 
               if [ "$HEALTH_STATUS" = "200" ]; then
 
-                if grep '"status":"UP"' \
-                  /tmp/tomo-health-response > /dev/null; then
+                if grep '"status":"UP"' "$HEALTH_BODY" > /dev/null; then
 
                   echo "✅ Health check OK"
                   HEALTH_OK=true
@@ -160,12 +161,12 @@ jobs:
                 fi
               fi
 
-              echo "Health check failed ($i/30, HTTP $HEALTH_STATUS)"
+              echo "Health check failed ($i/60, HTTP $HEALTH_STATUS)"
 
               sleep 3
             done
 
-            rm -f /tmp/tomo-health-response
+            rm -f "$HEALTH_BODY"
 
 
             # ---------------------------------
@@ -199,9 +200,7 @@ jobs:
                 -n 120 \
                 --no-pager \
                 -o cat \
-                | grep -E \
-                'APPLICATION FAILED|ERROR|Exception|Caused by|Failed to|Address already in use|Tomcat|Hikari|DataSource|Communications link|timed out|Timeout|Started TOMO' \
-                | tail -n 40 \
+                | tail -n 60 \
                 || true
 
 
