@@ -26,20 +26,20 @@ jobs:
           java-version: 21
 
       # =====================
-      # 3. gradlew 권한
+      # 3. gradlew 권한 부여
       # =====================
       - name: Grant gradlew permission
         run: chmod +x backend/gradlew
 
       # =====================
-      # 4. Build
+      # 4. Spring Boot Build
       # =====================
       - name: Build Spring Boot
         working-directory: backend
         run: ./gradlew clean build -x test
 
       # =====================
-      # 5. Upload JAR
+      # 5. JAR 서버 업로드
       # =====================
       - name: Upload JAR to server
         uses: appleboy/scp-action@v0.1.7
@@ -70,8 +70,9 @@ jobs:
             echo "== Start TOMO Deployment"
             echo "========================================="
 
+
             # ---------------------------------
-            # 1. 최신 JAR 교체
+            # 1. 최신 JAR 반영
             # ---------------------------------
             echo "== Replace tomo.jar with latest build =="
 
@@ -84,7 +85,7 @@ jobs:
 
 
             # ---------------------------------
-            # 2. 현재 Nginx가 바라보는 포트 확인
+            # 2. 현재 Nginx Active Port 확인
             # ---------------------------------
             echo "== Determine active port from nginx =="
 
@@ -92,7 +93,8 @@ jobs:
               grep -oE 'server 127\.0\.0\.1:(8081|8082);' \
                 /etc/nginx/sites-enabled/tomo.conf \
               | grep -oE '8081|8082' \
-              | head -n 1
+              | head -n 1 \
+              || true
             )
 
             if [ -z "$ACTIVE_PORT" ]; then
@@ -102,7 +104,7 @@ jobs:
 
 
             # ---------------------------------
-            # 3. 반대쪽 포트를 배포 대상으로 결정
+            # 3. 비활성 포트를 새 배포 대상으로 결정
             # ---------------------------------
             if [ "$ACTIVE_PORT" = "8081" ]; then
               TARGET_PORT=8082
@@ -123,7 +125,7 @@ jobs:
 
 
             # ---------------------------------
-            # 5. 비활성 포트에 새 버전 실행
+            # 5. Target 서비스 재시작
             # ---------------------------------
             echo "== Restart inactive service (tomo-$TARGET_PORT) =="
 
@@ -138,7 +140,8 @@ jobs:
             HEALTH_OK=false
             HEALTH_BODY=$(mktemp)
 
-            
+            # 앱 시작 시간이 약 190초까지 걸린 기록이 있으므로
+            # 3초 × 100회 = 최대 약 300초까지 대기
             for i in {1..100}; do
 
               HEALTH_STATUS=$(
@@ -153,24 +156,24 @@ jobs:
               if [ "$HEALTH_STATUS" = "200" ]; then
 
                 if grep '"status":"UP"' "$HEALTH_BODY" > /dev/null; then
-
                   echo "✅ Health check OK"
                   HEALTH_OK=true
                   break
-
                 fi
+
               fi
 
               echo "Health check failed ($i/100, HTTP $HEALTH_STATUS)"
 
               sleep 3
+
             done
 
             rm -f "$HEALTH_BODY"
 
 
             # ---------------------------------
-            # 7. Health Check 실패 시 배포 중단
+            # 7. Health Check 실패 처리
             # ---------------------------------
             if [ "$HEALTH_OK" != "true" ]; then
 
@@ -178,6 +181,7 @@ jobs:
               echo "❌ Health check failed"
               echo "❌ Deployment aborted"
               echo "========================================="
+
 
               echo "== systemd status =="
 
@@ -207,6 +211,7 @@ jobs:
               echo "== Existing traffic remains on $ACTIVE_PORT =="
 
               exit 1
+
             fi
 
 
@@ -238,36 +243,48 @@ jobs:
             if ! sudo nginx -t; then
 
               echo "❌ nginx config validation failed"
+
               echo "== Restore previous nginx config =="
 
               sudo cp \
                 /tmp/tomo.conf.backup \
                 /etc/nginx/sites-enabled/tomo.conf
 
-              rm -f /tmp/tomo.conf.backup
+              sudo rm -f \
+                /tmp/tomo.conf.backup
 
               exit 1
+
             fi
 
 
             # ---------------------------------
-            # 11. Nginx reload
+            # 11. Nginx Reload
             # ---------------------------------
             echo "== Reload nginx =="
 
             sudo systemctl reload nginx
 
-            rm -f /tmp/tomo.conf.backup
+
+            # ---------------------------------
+            # 12. 백업 파일 삭제
+            # sudo로 생성했으므로 sudo로 삭제
+            # ---------------------------------
+            sudo rm -f \
+              /tmp/tomo.conf.backup
 
 
             # ---------------------------------
-            # 12. 기존 버전 유지
+            # 13. 기존 프로세스 유지
             # ---------------------------------
             echo "== Keep previous service running =="
 
             sudo systemctl start tomo-$ACTIVE_PORT || true
 
 
+            # ---------------------------------
+            # 14. 완료
+            # ---------------------------------
             echo "========================================="
             echo "✅ Deployment completed"
             echo "Traffic switched:"
