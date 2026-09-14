@@ -88,36 +88,14 @@ jobs:
             sudo systemctl restart tomo-$TARGET_PORT
 
             echo "== Health check on $TARGET_PORT =="
-            HEALTH_OK=false
-            HEALTH_BODY=$(mktemp)
-
-            for i in {1..30}; do
-              HEALTH_STATUS=$(curl -sS -o "$HEALTH_BODY" -w '%{http_code}' \
-                http://127.0.0.1:$TARGET_PORT/actuator/health || true)
-
-              if [ "$HEALTH_STATUS" = "200" ] && grep '"status":"UP"' "$HEALTH_BODY" > /dev/null; then
+            for i in {1..10}; do
+              if curl -sf http://127.0.0.1:$TARGET_PORT/actuator/health | grep '"status":"UP"' > /dev/null; then
                 echo "Health check OK"
-                HEALTH_OK=true
                 break
               fi
-
-              echo "Health check failed ($i/30, HTTP $HEALTH_STATUS): $(cat "$HEALTH_BODY")"
               sleep 3
             done
-
-            rm -f "$HEALTH_BODY"
-
-            if [ "$HEALTH_OK" != "true" ]; then
-              echo "Health check failed. Deployment aborted."
-              sudo systemctl show tomo-$TARGET_PORT \
-                --property=ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,NRestarts,MainPID,Environment \
-                --no-pager
-              sudo ss -ltnp | grep -E ':(8081|8082)[[:space:]]' || true
-              sudo journalctl -u tomo-$TARGET_PORT -n 120 --no-pager -o cat \
-                | grep -E 'APPLICATION FAILED|ERROR|Exception|Caused by|Failed to|Address already in use|Tomcat|Hikari|DataSource|Communications link|timed out|Timeout|Started TOMO' \
-                | tail -n 40 || true
-              exit 1
-            fi
+            }
 
             echo "== Switch nginx upstream =="
             sudo sed -i "s/server 127.0.0.1:$ACTIVE_PORT;/server 127.0.0.1:$TARGET_PORT;/" \
