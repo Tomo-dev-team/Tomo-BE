@@ -109,6 +109,12 @@ jobs:
 
             if [ "$HEALTH_OK" != "true" ]; then
               echo "Health check failed. Deployment aborted."
+              sudo systemctl show tomo-$TARGET_PORT \
+                --property=ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,NRestarts \
+                --no-pager
+              sudo journalctl -u tomo-$TARGET_PORT -n 120 --no-pager -o cat \
+                | grep -E 'APPLICATION FAILED|ERROR|Exception|Caused by|Failed to|Address already in use' \
+                | tail -n 40 || true
               exit 1
             fi
 
