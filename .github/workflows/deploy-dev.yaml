@@ -65,6 +65,7 @@ jobs:
 
           script: |
             set -e
+            DEPLOY_START=$(date +%s)
 
             echo "========================================="
             echo "== Start TOMO Deployment"
@@ -72,20 +73,7 @@ jobs:
 
 
             # ---------------------------------
-            # 1. 최신 JAR 반영
-            # ---------------------------------
-            echo "== Replace tomo.jar with latest build =="
-
-            sudo cp \
-              /home/ubuntu/app/TOMO-0.0.1-SNAPSHOT.jar \
-              /home/ubuntu/app/tomo.jar
-
-            sudo chown ubuntu:ubuntu \
-              /home/ubuntu/app/tomo.jar
-
-
-            # ---------------------------------
-            # 2. 현재 Nginx Active Port 확인
+            # 1. 현재 Nginx Active Port 확인
             # ---------------------------------
             echo "== Determine active port from nginx =="
 
@@ -104,7 +92,7 @@ jobs:
 
 
             # ---------------------------------
-            # 3. 비활성 포트를 새 배포 대상으로 결정
+            # 2. 비활성 포트를 새 배포 대상으로 결정
             # ---------------------------------
             if [ "$ACTIVE_PORT" = "8081" ]; then
               TARGET_PORT=8082
@@ -114,6 +102,15 @@ jobs:
 
             echo "ACTIVE_PORT=$ACTIVE_PORT"
             echo "TARGET_PORT=$TARGET_PORT"
+
+
+            # ---------------------------------
+            # 3. 최신 JAR를 Target 슬롯에만 반영
+            # Active 슬롯의 jar는 건드리지 않음
+            # ---------------------------------
+            echo "== Install latest build as tomo-$TARGET_PORT.jar =="
+
+            sudo install -o ubuntu -g ubuntu -m 644 /home/ubuntu/app/TOMO-0.0.1-SNAPSHOT.jar /home/ubuntu/app/tomo-$TARGET_PORT.jar
 
 
             # ---------------------------------
@@ -129,6 +126,7 @@ jobs:
             # ---------------------------------
             echo "== Restart inactive service (tomo-$TARGET_PORT) =="
 
+            sudo systemctl reset-failed tomo-$TARGET_PORT || true
             sudo systemctl restart tomo-$TARGET_PORT
 
 
@@ -156,7 +154,7 @@ jobs:
               if [ "$HEALTH_STATUS" = "200" ]; then
 
                 if grep '"status":"UP"' "$HEALTH_BODY" > /dev/null; then
-                  echo "✅ Health check OK"
+                  echo "✅ Health check OK after $(( $(date +%s) - DEPLOY_START ))s ($i tries)"
                   HEALTH_OK=true
                   break
                 fi
@@ -210,6 +208,8 @@ jobs:
 
               echo "== Existing traffic remains on $ACTIVE_PORT =="
 
+              sudo systemctl stop tomo-$TARGET_PORT || true
+
               exit 1
 
             fi
@@ -253,6 +253,8 @@ jobs:
               sudo rm -f \
                 /tmp/tomo.conf.backup
 
+              sudo systemctl stop tomo-$TARGET_PORT || true
+
               exit 1
 
             fi
@@ -275,11 +277,13 @@ jobs:
 
 
             # ---------------------------------
-            # 13. 기존 프로세스 유지
+            # 13. 기존 슬롯 정리
             # ---------------------------------
-            echo "== Keep previous service running =="
-
-            sudo systemctl start tomo-$ACTIVE_PORT || true
+            echo "== Draining $ACTIVE_PORT (15s) =="
+            sleep 15
+            sudo systemctl stop tomo-$ACTIVE_PORT
+            sudo systemctl enable tomo-$TARGET_PORT
+            sudo systemctl disable tomo-$ACTIVE_PORT
 
 
             # ---------------------------------
@@ -290,3 +294,5 @@ jobs:
             echo "Traffic switched:"
             echo "$ACTIVE_PORT -> $TARGET_PORT"
             echo "========================================="
+            echo "Total: $(( $(date +%s) - DEPLOY_START ))s"
+            free -h
